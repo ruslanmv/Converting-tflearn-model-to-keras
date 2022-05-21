@@ -1,11 +1,12 @@
 # Converting TFLEARN model to Keras
 
-Hello everyone, today we are going to learn how to convert a simple neural network made in TFLEARN to Keras
+Hello everyone, today we are going to learn how to translate a simple neural network made in TFLEARN to Keras
 
 The neural network that I want to translate to **Keras** from **TFLEARN** is the following:
 
 
 ```python
+from utils import nparameters_convolution, roundeven #Helper functions for this blog
 def alexnet_adapted(width, height, lr, output=29):
     # Building 'AlexNet'                                                               #line  Type Layer   Operation
     network = input_data(shape=[None, width, height, 3])                               #0
@@ -36,6 +37,39 @@ def alexnet_adapted(width, height, lr, output=29):
     return model
 ```
 
+with the following set of parameter
+
+
+```python
+#Normalization Parameter
+Norma        = 29/1000
+#Paramters                          Operation Type Layer
+filters1     =  roundeven(96*Norma)   #1        CONV1
+kernel1      =  11       
+stride1      =  4
+kernel2      =  3                     #2        POOL1
+stride2      =  2
+filters3     =  roundeven(256*Norma)  #3        CONV2
+kernel3      =  5
+kernel4      =  3                     #4        POOL2
+stride4      =  2
+filters5     =  roundeven(384*Norma)  #5        CONV3
+kernel5      =  3
+filters6     =  roundeven(384*Norma)  #6        CONV4
+kernel6      =  3
+filters7     =  roundeven(256*Norma)  #7        CONV5
+kernel7      =  3
+kernel8      =  3                      #8       POOL3
+stride8      =  2 
+activation9  =  roundeven(4096*Norma)  #9       FC1
+activation10 =  roundeven(4096*Norma)  #10      FC2
+outputs11    =  int(1000*Norma)   #11           FC3
+
+dropout13=0.5
+dropout15=0.5
+learning_rate17=0.001
+```
+
 This is the adapted version of the Alexnet Network to the **MMORPG-AI** problem
 
 ## Step 1  Analysis of the architecture of the network
@@ -57,51 +91,6 @@ The parameters of the network will be kept according to the above descriptions,
 Since we will test this model **MMORPG- AI** problem 
 at the output layer we will define a Dense layer with **29 nodes**.
 
-Let us define some helper functions to generalize the parameters of the **Adapted version** of the Neural Network of AlexNet.
-
-
-```python
-#round a float up to next even number
-import math
-def roundeven(f):
-    return math.ceil(f / 2.) * 2
-```
-
-with the following set of parameter
-
-
-```python
-#Normalization Parameter
-Norma        = 29/1000
-#Paramters                          Operation 
-filters1     =  roundeven(96*Norma)   #1
-kernel1      =  11       
-stride1      =  4
-kernel2      =  3                     #2
-stride2      =  2
-filters3     =  roundeven(256*Norma)  #3
-kernel3      =  5
-kernel4      =  3                     #4
-stride4      =  2
-filters5     =  roundeven(384*Norma)  #5
-kernel5      =  3
-filters6     =  roundeven(384*Norma)  #6
-kernel6      =  3
-filters7     =  roundeven(256*Norma)  #7
-kernel7      =  3
-kernel8      =  3                      #8
-stride8      =  2 
-activation9  =  roundeven(4096*Norma)  #9
-activation10 =  roundeven(4096*Norma)  #10
-outputs11    =  int(1000*Norma)   #11
-
-dropout13=0.5
-dropout15=0.5
-learning_rate17=0.001
-```
-
-
-
 The model that we want to translate is simply a modified version of the AlexNet Network. From the previous parametrization we can determine the values of the **activation shape**, **activation size** and **number of parameters**, as was described in my previous blog.
 
 ```
@@ -121,56 +110,6 @@ Operation, Activation Shape, Activation Size, #Parameters
 ```
 
 Having in mind those numbers it is more simple perform the translation from one to another neural network formalism.
-
-In ordering to simplify the discussion of this notebook let us define the following helper function, which simply give us the activation shape of the Convolution Network
-
-
-```python
-def nparameters_convolution(inputs, kernel,stride,padding,filters):
-    '''
-    input = (nh, nw, nc)
-    where 
-    nh: height
-    nw: widht
-    nc: channels
-    
-    activation_shape  = (nhl,nwl,ncl)
-       
-    nhl = (nh+2*p-fw)/s + 1
-    nwl = (nw+2*p-fh)/s + 1
-    ncl = filters
-    
-    
-    where
-       fw,fh : filter sizes
-       p : padding
-       s : stride  
-    ncl  : filters
-    
-    '''
-    nh,nw,nc = inputs
-    fh,fw = kernel
-     
-    s        = stride
-    p        = padding
-    ncl      = filters
-    
-    #activation shape 
-    nhl = (nh+2*p-fw)/s + 1
-    nwl = (nw+2*p-fh)/s + 1
-    activation_shape = (int(nhl),int(nwl),int(ncl))
-    
-    # activation size
-    activation_size=int(nhl)*int(nwl)*int(ncl)
-    
-    
-    # number Parameters
-    nparameters=((fh*fw*nc)+1)*ncl
-    
-    print("Activation Shape,", "Activation Size,","# Parameters")
-     
-    return   activation_shape ,  activation_size, nparameters
-```
 
 ## Step 2  - Importing library for Keras
 
@@ -199,7 +138,6 @@ We instantiation the network in Keras like
 
 ```python
 np.random.seed(1000)
-
 #Instantiation
 AlexNet = Sequential()
 ```
@@ -208,84 +146,102 @@ In ordering to "translate" from one framework to another we need know only three
 
 ### 1st Convolutional Layer
 
-The input layer that we will consider in this project cooresponds to an image with the following  dimensions (270, 480, 3) or simply by (width, height, ncolors),   with  kernel 11 x 11 and  stride 4 without padding and 4 filters.
+The input layer that we will consider in this project cooresponds to an image with the following  dimensions **(270, 480, 3)** or simply by (width, height, ncolors),   with  kernel **11 x 11** and  stride 4 without padding and 4 filters.
 
 
 Each neuron in the convolutional layer is connected only to a local region in the input volume spatially, but to the full depth (i.e. all color channels).
 
 ![title](img/deep.jpeg)
 
+ The  Conv2D parameter, filters determines the number of kernels to convolve with the input volume. Each of these operations produces a 2D activation map.
+ 
+A Conv2D layer outputs n feature maps, which is the number of kernels or filters, and the channels dimension is always equal to the number of output feature maps. 
+
+The Keras Conv2D layer, given a multi-channel input , will apply the filter across ALL the color channels and sum the results, producing the equivalent of a monochrome convolved output image. 
+
+Let us consider our input image file
+with this dimension (270, 480, 3)
+
 
 ```python
 inputs  = height, width, ncolors #nw x nh x nc image
-kernel  = 11,11      #fw x fw  filter
+kernel  = 11,11    #fw x fw  filter
 stride  = 4.0      #stride s
-padding = 0.0      #padding p
+padding = 5        #padding p
 filters = 4        #number of filters ncl
 newinput=nparameters_convolution(inputs, kernel,stride,padding,filters)
 newinput
 ```
 
     Activation Shape, Activation Size, # Parameters
+    
 
 
 
 
-
-    ((65, 118, 4), 30680, 1456)
+    ((68, 120, 4), 32640, 1456)
 
 
 
 Where in TFELEARN the 1st Convolutional Layer called CONV1 corresponds to
 
 ```
-network = conv_2d(network, filters1, kernel1, stride1, activation='relu')          #1    CONV1         1
+network = conv_2d(network, 4, 11, 4, activation='relu')          #1    CONV1         1
 ```
-with the activation shape
-(65, 118, 96)
-and input 
-(270, 480, 3)
-
-A Conv2D layer outputs n feature maps, which is the number of kernels or filters, and the channels dimension is always equal to the number of output feature maps.
-
-The Keras Conv2D layer, given a multi-channel input (e.g. a color image), will apply the filter across ALL the color channels and sum the results, producing the equivalent of a monochrome convolved output image. In keras you have two types of Conv2d, with valid padding and same.
-
-"valid" only ever drops the right-most columns (or bottom-most rows).
-There's no "made-up" padding inputs. The layer only uses valid input data.
-
-"same" tries to pad evenly left and right, but if the amount of columns to be added is odd, it will add the extra column to the right, as is the case in this example (the same logic applies vertically: there may be an extra row of zeros at the bottom).
-If you use a stride of 1, the layer's outputs will have the same spatial dimensions as its inputs
-
-Example:
-
-Input width = 13
-
-Filter width = 6
-
-Stride = 5
-
-
-"valid" = without padding:
+Where the first arguments in Tflearn are
 
 ```
-
-   inputs:         1  2  3  4  5  6  7  8  9  10 11 (12 13)
-                  |________________|                dropped
-                                 |_________________|
+tflearn.layers.conv.conv_2d (
+incoming,
+nb_filter,
+filter_size,
+strides=1,
+padding='same'
+)
 ```
 
+Arguments
+- incoming: Tensor. Incoming 4-D Tensor.
+- nb_filter: int. The number of convolutional filters.
+- filter_size: int or list of int. Size of filters.
+- strides: 'intor list ofint`. Strides of conv operation. Default: [1 1 1 1].
+- padding: str from "same", "valid". Padding algo to use. Default: 'same'.
 
-"same" = with zero padding:
+Meanwhile in keras the first Arguments of the Conv2D class are the following
+
 ```
-               pad|                                      |pad
-   inputs:      0 |1  2  3  4  5  6  7  8  9  10 11 12 13|0  0
-               |________________|
-                              |_________________|
-                                             |________________|
+Conv2D class
+tf.keras.layers.Conv2D(
+    filters,
+    kernel_size,
+    strides=(1, 1),
+    padding="valid",
+)
 ```
 
+Arguments
+
+- filters: Integer, the dimensionality of the output space (i.e. the number of output filters in the convolution).
+- kernel_size: An integer or tuple/list of 2 integers, specifying the height and width of the 2D convolution window. 
+- strides: An integer or tuple/list of 2 integers, specifying the strides of the convolution along the height and width. 
+- padding: one of "valid" or "same" (case-insensitive). "valid" means no padding. "same" results in padding with zeros evenly to the left/right or up/down of the input. When padding="same" and strides=1, the output has the same size as the input.
+
+then in the Keras this is given by
 
 
+```python
+AlexNet.add(Conv2D(filters=4, input_shape=(270, 480, 3), kernel_size=(11,11), strides=(4,4), padding='same'))
+```
+
+This layer creates a convolution kernel that is convolved with the layer input to produce a tensor of outputs.  On the first layer we learn a total of 4 filters. 
+
+
+```python
+AlexNet.add(BatchNormalization())
+AlexNet.add(Activation('relu'))
+```
+
+The calculation of the dimensions used in nparameters_convolution adapted to keras may be computed as:
 
 
 ```python
@@ -301,10 +257,6 @@ def conv2d_keras(input_length,stride ,filter_size,padding):
 ```python
 out_height = conv2d_keras(height ,stride1,filters1,'same')
 out_width  = conv2d_keras(width ,stride1,filters1,'same')
-```
-
-
-```python
 out_height,out_width,filters1
 ```
 
@@ -315,49 +267,42 @@ out_height,out_width,filters1
 
 
 
-and then in the Keras this is given by
-
-
-```python
-AlexNet.add(Conv2D(filters=filters1, input_shape=(270, 480, 3), kernel_size=(kernel1,kernel1), strides=(stride1,stride1), padding='same'))
-```
-
 
 ```python
 #Model Summary
 AlexNet.summary()
 ```
 
-    Model: "sequential_1"
+    Model: "sequential"
     _________________________________________________________________
      Layer (type)                Output Shape              Param #   
     =================================================================
-     conv2d_1 (Conv2D)           (None, 68, 120, 4)        1456      
+     conv2d (Conv2D)             (None, 68, 120, 4)        1456      
                                                                      
-     conv2d_2 (Conv2D)           (None, 17, 30, 4)         1940      
+     batch_normalization (BatchN  (None, 68, 120, 4)       16        
+     ormalization)                                                   
                                                                      
-     conv2d_3 (Conv2D)           (None, 5, 8, 4)           1940      
-                                                                     
-     conv2d_4 (Conv2D)           (None, 2, 2, 4)           1940      
+     activation (Activation)     (None, 68, 120, 4)        0         
                                                                      
     =================================================================
-    Total params: 7,276
-    Trainable params: 7,276
-    Non-trainable params: 0
+    Total params: 1,472
+    Trainable params: 1,464
+    Non-trainable params: 8
     _________________________________________________________________
+    
+
+From the previous summary we can see that the Total of parameters are 1456, which is the same of  # Parameters.
 
 
-
-```python
-AlexNet.add(BatchNormalization())
-AlexNet.add(Activation('relu'))
-```
+Max pooling is then used to reduce the spatial dimensions of the output volume.
 
 In TFLEARN the the next part
 ```
     network = max_pool_2d(network, kernel2, strides=stride2 )                          #2    POOL1         2
     network = local_response_normalization(network)                                    #3    
 ```
+
+
 in Keras may be written as
 
 
@@ -371,37 +316,36 @@ AlexNet.add(MaxPooling2D(pool_size=(kernel2,kernel2), strides=(stride2,stride2),
 AlexNet.summary()
 ```
 
-    Model: "sequential_1"
+    Model: "sequential"
     _________________________________________________________________
      Layer (type)                Output Shape              Param #   
     =================================================================
-     conv2d_1 (Conv2D)           (None, 68, 120, 4)        1456      
+     conv2d (Conv2D)             (None, 68, 120, 4)        1456      
                                                                      
-     conv2d_2 (Conv2D)           (None, 17, 30, 4)         1940      
+     batch_normalization (BatchN  (None, 68, 120, 4)       16        
+     ormalization)                                                   
+                                                                     
+     activation (Activation)     (None, 68, 120, 4)        0         
+                                                                     
+     max_pooling2d (MaxPooling2D  (None, 34, 60, 4)        0         
+     )                                                               
                                                                      
     =================================================================
-    Total params: 3,396
-    Trainable params: 3,396
-    Non-trainable params: 0
+    Total params: 1,472
+    Trainable params: 1,464
+    Non-trainable params: 8
     _________________________________________________________________
+    
+
+In keras you have two types of Conv2d, with valid padding and same.
 
 
-Just for Completeness if you use  tf.layers.conv2d_transpose() with SAME padding you have
+- valid : only ever drops the right-most columns (or bottom-most rows).
+There's no "made-up" padding inputs. The layer only uses valid input data.
 
+- same  tries to pad evenly left and right, but if the amount of columns to be added is odd, it will add the extra column to the right.
 
-```python
-# for `tf.layers.conv2d_transpose()` with `SAME` padding:
-out_height = height * stride1
-out_width  = width * stride1
-out_height,out_width
-```
-
-
-
-
-    (1080, 1920)
-
-
+If you use a stride of 1, the layer's outputs will have the same spatial dimensions as its inputs
 
 
 ### 2nd Convolutional Layer
@@ -468,7 +412,7 @@ AlexNet.add(Activation('relu'))
 In TFLEARN
 ```
   network = conv_2d(network, filters7, kernel7 , activation='relu')                  #9    CONV5         7
-```
+```  
 becomes in Keras
 
 
@@ -579,97 +523,290 @@ AlexNet.summary()
                                                                      
      activation (Activation)     (None, 68, 120, 4)        0         
                                                                      
-     conv2d_1 (Conv2D)           (None, 17, 30, 4)         1940      
-                                                                     
-     batch_normalization_1 (Batc  (None, 17, 30, 4)        16        
-     hNormalization)                                                 
-                                                                     
-     activation_1 (Activation)   (None, 17, 30, 4)         0         
-                                                                     
-     max_pooling2d (MaxPooling2D  (None, 9, 15, 4)         0         
+     max_pooling2d (MaxPooling2D  (None, 34, 60, 4)        0         
      )                                                               
                                                                      
-     conv2d_2 (Conv2D)           (None, 9, 15, 8)          808       
+     conv2d_1 (Conv2D)           (None, 34, 60, 8)         808       
                                                                      
-     batch_normalization_2 (Batc  (None, 9, 15, 8)         32        
+     batch_normalization_1 (Batc  (None, 34, 60, 8)        32        
      hNormalization)                                                 
                                                                      
-     activation_2 (Activation)   (None, 9, 15, 8)          0         
+     activation_1 (Activation)   (None, 34, 60, 8)         0         
                                                                      
-     max_pooling2d_1 (MaxPooling  (None, 5, 8, 8)          0         
+     max_pooling2d_1 (MaxPooling  (None, 17, 30, 8)        0         
      2D)                                                             
                                                                      
-     conv2d_3 (Conv2D)           (None, 5, 8, 12)          876       
+     conv2d_2 (Conv2D)           (None, 17, 30, 12)        876       
                                                                      
-     batch_normalization_3 (Batc  (None, 5, 8, 12)         48        
+     batch_normalization_2 (Batc  (None, 17, 30, 12)       48        
      hNormalization)                                                 
                                                                      
-     activation_3 (Activation)   (None, 5, 8, 12)          0         
+     activation_2 (Activation)   (None, 17, 30, 12)        0         
                                                                      
-     conv2d_4 (Conv2D)           (None, 5, 8, 12)          1308      
+     conv2d_3 (Conv2D)           (None, 17, 30, 12)        1308      
                                                                      
-     batch_normalization_4 (Batc  (None, 5, 8, 12)         48        
+     batch_normalization_3 (Batc  (None, 17, 30, 12)       48        
      hNormalization)                                                 
                                                                      
-     activation_4 (Activation)   (None, 5, 8, 12)          0         
+     activation_3 (Activation)   (None, 17, 30, 12)        0         
                                                                      
-     conv2d_5 (Conv2D)           (None, 5, 8, 8)           872       
+     conv2d_4 (Conv2D)           (None, 17, 30, 8)         872       
                                                                      
-     batch_normalization_5 (Batc  (None, 5, 8, 8)          32        
+     batch_normalization_4 (Batc  (None, 17, 30, 8)        32        
      hNormalization)                                                 
                                                                      
-     activation_5 (Activation)   (None, 5, 8, 8)           0         
+     activation_4 (Activation)   (None, 17, 30, 8)         0         
                                                                      
-     max_pooling2d_2 (MaxPooling  (None, 3, 4, 8)          0         
+     max_pooling2d_2 (MaxPooling  (None, 9, 15, 8)         0         
      2D)                                                             
                                                                      
-     flatten (Flatten)           (None, 96)                0         
+     flatten (Flatten)           (None, 1080)              0         
                                                                      
-     dense (Dense)               (None, 120)               11640     
+     dense (Dense)               (None, 120)               129720    
+                                                                     
+     batch_normalization_5 (Batc  (None, 120)              480       
+     hNormalization)                                                 
+                                                                     
+     activation_5 (Activation)   (None, 120)               0         
+                                                                     
+     dropout (Dropout)           (None, 120)               0         
+                                                                     
+     dense_1 (Dense)             (None, 120)               14520     
                                                                      
      batch_normalization_6 (Batc  (None, 120)              480       
      hNormalization)                                                 
                                                                      
      activation_6 (Activation)   (None, 120)               0         
                                                                      
+     dropout_1 (Dropout)         (None, 120)               0         
+                                                                     
+     dense_2 (Dense)             (None, 1000)              121000    
+                                                                     
+     batch_normalization_7 (Batc  (None, 1000)             4000      
+     hNormalization)                                                 
+                                                                     
+     activation_7 (Activation)   (None, 1000)              0         
+                                                                     
+     dropout_2 (Dropout)         (None, 1000)              0         
+                                                                     
+     dense_3 (Dense)             (None, 29)                29029     
+                                                                     
+     batch_normalization_8 (Batc  (None, 29)               116       
+     hNormalization)                                                 
+                                                                     
+     activation_8 (Activation)   (None, 29)                0         
+                                                                     
+    =================================================================
+    Total params: 304,841
+    Trainable params: 302,215
+    Non-trainable params: 2,626
+    _________________________________________________________________
+    
+
+
+```python
+from IPython.display import display_html
+def restartkernel() :
+    display_html("<script>Jupyter.notebook.kernel.restart()</script>",raw=True)
+
+```
+
+
+```python
+restartkernel()
+```
+
+
+<script>Jupyter.notebook.kernel.restart()</script>
+
+
+# FULL CODE 1 Translated
+
+
+```python
+#Helper functions for this blog
+from utils import nparameters_convolution, roundeven
+#Importing library
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout, Flatten, Conv2D, MaxPooling2D
+import numpy as np
+from tensorflow.keras.layers import BatchNormalization
+
+
+#We define the parameters
+width= 480
+height= 270
+ncolors=3
+#Normalization Parameter
+Norma        = 29/1000
+#Paramters                          Operation 
+filters1     =  roundeven(96*Norma)   #1
+kernel1      =  11       
+stride1      =  4
+kernel2      =  3                     #2
+stride2      =  2
+filters3     =  roundeven(256*Norma)  #3
+kernel3      =  5
+kernel4      =  3                     #4
+stride4      =  2
+filters5     =  roundeven(384*Norma)  #5
+kernel5      =  3
+filters6     =  roundeven(384*Norma)  #6
+kernel6      =  3
+filters7     =  roundeven(256*Norma)  #7
+kernel7      =  3
+kernel8      =  3                      #8
+stride8      =  2 
+activation9  =  roundeven(4096*Norma)  #9
+activation10 =  roundeven(4096*Norma)  #10
+outputs11    =  int(1000*Norma)   #11
+
+dropout13=0.5
+dropout15=0.5
+learning_rate17=0.001
+
+
+np.random.seed(1000)
+#Instantiation
+AlexNet = Sequential()
+AlexNet.add(Conv2D(filters=filters1, input_shape=(height, width, ncolors), kernel_size=(11,11), strides=(stride1,stride1), padding='same'))
+AlexNet.add(BatchNormalization())
+AlexNet.add(Activation('relu'))
+AlexNet.add(MaxPooling2D(pool_size=(kernel2,kernel2), strides=(stride2,stride2), padding='same'))
+AlexNet.add(Conv2D(filters=filters3, kernel_size=(kernel3, kernel3), padding='same'))
+AlexNet.add(BatchNormalization())
+AlexNet.add(Activation('relu'))
+AlexNet.add(MaxPooling2D(pool_size=(kernel4,kernel4), strides=(stride4,stride4), padding='same'))
+#3rd Convolutional Layer
+AlexNet.add(Conv2D(filters=filters5, kernel_size=(kernel5,kernel5), padding='same'))
+AlexNet.add(BatchNormalization())
+AlexNet.add(Activation('relu'))
+#4th Convolutional Layer
+AlexNet.add(Conv2D(filters=filters6, kernel_size=( kernel6, kernel6), padding='same'))
+AlexNet.add(BatchNormalization())
+AlexNet.add(Activation('relu'))
+#5th Convolutional Layer
+AlexNet.add(Conv2D(filters=filters7, kernel_size=(kernel7,kernel7),  padding='same'))
+AlexNet.add(BatchNormalization())
+AlexNet.add(Activation('relu'))
+AlexNet.add(MaxPooling2D(pool_size=(kernel8,kernel8), strides=(stride8,stride8), padding='same'))
+#Passing it to a Fully Connected layer
+AlexNet.add(Flatten())
+# 1st Fully Connected Layer
+AlexNet.add(Dense(activation9, input_shape=(270, 480, 3,)))
+AlexNet.add(BatchNormalization())
+AlexNet.add(Activation('relu'))
+# Add Dropout to prevent overfitting
+AlexNet.add(Dropout(dropout13))
+#2nd Fully Connected Layer
+AlexNet.add(Dense(activation10))
+AlexNet.add(BatchNormalization())
+AlexNet.add(Activation('relu'))
+#Add Dropout
+AlexNet.add(Dropout(dropout15))
+#3rd Fully Connected Layer
+AlexNet.add(Dense(1000))
+AlexNet.add(BatchNormalization())
+AlexNet.add(Activation('relu'))
+#Add Dropout
+AlexNet.add(Dropout(dropout15))
+#Output Layer
+AlexNet.add(Dense(outputs11))
+AlexNet.add(BatchNormalization())
+AlexNet.add(Activation('softmax'))
+
+#Model Summary
+AlexNet.summary()
+```
+
+    Model: "sequential"
+    _________________________________________________________________
+     Layer (type)                Output Shape              Param #   
+    =================================================================
+     conv2d (Conv2D)             (None, 68, 120, 4)        1456      
+                                                                     
+     batch_normalization (BatchN  (None, 68, 120, 4)       16        
+     ormalization)                                                   
+                                                                     
+     activation (Activation)     (None, 68, 120, 4)        0         
+                                                                     
+     max_pooling2d (MaxPooling2D  (None, 34, 60, 4)        0         
+     )                                                               
+                                                                     
+     conv2d_1 (Conv2D)           (None, 34, 60, 8)         808       
+                                                                     
+     batch_normalization_1 (Batc  (None, 34, 60, 8)        32        
+     hNormalization)                                                 
+                                                                     
+     activation_1 (Activation)   (None, 34, 60, 8)         0         
+                                                                     
+     max_pooling2d_1 (MaxPooling  (None, 17, 30, 8)        0         
+     2D)                                                             
+                                                                     
+     conv2d_2 (Conv2D)           (None, 17, 30, 12)        876       
+                                                                     
+     batch_normalization_2 (Batc  (None, 17, 30, 12)       48        
+     hNormalization)                                                 
+                                                                     
+     activation_2 (Activation)   (None, 17, 30, 12)        0         
+                                                                     
+     conv2d_3 (Conv2D)           (None, 17, 30, 12)        1308      
+                                                                     
+     batch_normalization_3 (Batc  (None, 17, 30, 12)       48        
+     hNormalization)                                                 
+                                                                     
+     activation_3 (Activation)   (None, 17, 30, 12)        0         
+                                                                     
+     conv2d_4 (Conv2D)           (None, 17, 30, 8)         872       
+                                                                     
+     batch_normalization_4 (Batc  (None, 17, 30, 8)        32        
+     hNormalization)                                                 
+                                                                     
+     activation_4 (Activation)   (None, 17, 30, 8)         0         
+                                                                     
+     max_pooling2d_2 (MaxPooling  (None, 9, 15, 8)         0         
+     2D)                                                             
+                                                                     
+     flatten (Flatten)           (None, 1080)              0         
+                                                                     
+     dense (Dense)               (None, 120)               129720    
+                                                                     
+     batch_normalization_5 (Batc  (None, 120)              480       
+     hNormalization)                                                 
+                                                                     
+     activation_5 (Activation)   (None, 120)               0         
+                                                                     
      dropout (Dropout)           (None, 120)               0         
                                                                      
      dense_1 (Dense)             (None, 120)               14520     
                                                                      
-     batch_normalization_7 (Batc  (None, 120)              480       
+     batch_normalization_6 (Batc  (None, 120)              480       
      hNormalization)                                                 
                                                                      
-     activation_7 (Activation)   (None, 120)               0         
+     activation_6 (Activation)   (None, 120)               0         
                                                                      
      dropout_1 (Dropout)         (None, 120)               0         
                                                                      
      dense_2 (Dense)             (None, 1000)              121000    
                                                                      
-     batch_normalization_8 (Batc  (None, 1000)             4000      
+     batch_normalization_7 (Batc  (None, 1000)             4000      
      hNormalization)                                                 
                                                                      
-     activation_8 (Activation)   (None, 1000)              0         
+     activation_7 (Activation)   (None, 1000)              0         
                                                                      
      dropout_2 (Dropout)         (None, 1000)              0         
                                                                      
-     dense_3 (Dense)             (None, 1000)              1001000   
+     dense_3 (Dense)             (None, 29)                29029     
                                                                      
-     batch_normalization_9 (Batc  (None, 1000)             4000      
+     batch_normalization_8 (Batc  (None, 29)               116       
      hNormalization)                                                 
                                                                      
-     activation_9 (Activation)   (None, 1000)              0         
-                                                                     
-     dropout_3 (Dropout)         (None, 1000)              0         
-                                                                     
-     dense_4 (Dense)             (None, 29)                29029     
-                                                                     
-     batch_normalization_10 (Bat  (None, 29)               116       
-     chNormalization)                                                
-                                                                     
-     activation_10 (Activation)  (None, 29)                0         
+     activation_8 (Activation)   (None, 29)                0         
                                                                      
     =================================================================
-    Total params: 1,193,717
-    Trainable params: 1,189,083
-    Non-trainable params: 4,634
+    Total params: 304,841
+    Trainable params: 302,215
+    Non-trainable params: 2,626
     _________________________________________________________________
+    
